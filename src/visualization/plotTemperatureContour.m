@@ -1,21 +1,23 @@
 function plotTemperatureContour(solution)
 
-y=linspace(0,0.5,50);
+x = solution.x;
+T = solution.T(:);
 
-[X,Y]=meshgrid(solution.x,y);
+y = linspace(0, 0.5, 50);
 
-Tcontour=repmat(solution.T,length(y),1);
+[X,Y] = meshgrid(x,y);
+
+Tcontour = repmat(T.', length(y), 1);
+
 figure;
 
 contourf(X,Y,Tcontour,50,'LineStyle','none');
-colormap("turbo");
+
 colorbar;
 
-shading interp;
-xlabel('Position [x]');
-ylabel('Temperature (k)');
+xlabel('Position, x [m]');
+ylabel('Height [m]');
 
-title('Temeprature distribution contour');
-
+title('Temperature Contour');
 
 end

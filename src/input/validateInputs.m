@@ -57,7 +57,16 @@ switch inputs.BC.left.type
         if ~isfinite(inputs.BC.left.Tinf)
             error('Left fluid temperature must be a valid finite value.');
         end
+    
+    case 5
 
+        if inputs.BC.left.emissivity < 0 || inputs.BC.left.emissivity > 1
+            error('Left emissivity must be between 0 and 1.');
+        end
+        
+        if ~isfinite(inputs.BC.left.Tsurr) || inputs.BC.left.Tsurr <= 0
+            error('Left surrounding temperature must be a positive finite value in Kelvin.');
+        end
 
     otherwise
         error('Invalid left boundary condition type.');
@@ -93,7 +102,16 @@ switch inputs.BC.right.type
         if ~isfinite(inputs.BC.right.Tinf)
             error('Right fluid temperature must be a valid finite value.');
         end
+    
+    case 5
 
+        if inputs.BC.right.emissivity < 0 || inputs.BC.right.emissivity > 1
+            error('Right emissivity must be between 0 and 1.');
+        end
+    
+        if ~isfinite(inputs.BC.right.Tsurr) || inputs.BC.right.Tsurr <= 0
+            error('Right surrounding temperature must be a positive finite value in Kelvin.');
+        end
 
     otherwise
         error('Invalid right boundary condition type.');

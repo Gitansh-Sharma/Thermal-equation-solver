@@ -97,18 +97,21 @@ for iter = 1:maxIter
 
     end
 
-    for i = 2:N-1
+   for i = 2:N-1
 
-        F(i) = T(i-1) ...
-             - 2*T(i) ...
-             + T(i+1) ...
-             + qgen * dx^2 / k;
+    % Conductivity at the faces
+    kWest = k;
+    kEast = k;
 
-        J(i,i-1) = 1;
-        J(i,i) = -2;
-        J(i,i+1) = 1;
+    % Conservative finite-difference equation
+    F(i) = -kWest * T(i-1)  + (kWest + kEast) * T(i)- kEast * T(i+1) + qgen * dx^2;
 
-    end
+    % Jacobian
+    J(i,i-1) = -kWest;
+    J(i,i)   =  kWest + kEast;
+    J(i,i+1) = -kEast;
+
+  end
 
     switch BC.right.type
 

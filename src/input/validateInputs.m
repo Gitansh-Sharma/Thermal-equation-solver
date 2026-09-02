@@ -1,7 +1,9 @@
 function validateInputs(inputs)
 
-if inputs.k <= 0
-    error('Thermal conductivity k must be greater than zero.');
+if inputs.thermalchoice==0
+    if isnumeric(inputs.k) && inputs.k <= 0
+        error('Thermal conductivity k must be greater than zero.');
+    end
 end
 
 if inputs.t <= 0

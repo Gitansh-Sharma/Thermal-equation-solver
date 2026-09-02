@@ -10,6 +10,8 @@ qgen = inputs.qgen;
 
 A = zeros(2,2);
 b = zeros(2,1);
+T_left=inputs.BC.left.T;
+T_right=inputs.BC.right.T;
 
 switch inputs.BC.left.type
 

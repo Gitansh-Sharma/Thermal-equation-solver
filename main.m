@@ -30,7 +30,14 @@ if geometryc == 1
         fprintf('========================================\n');
 
         fprintf('Geometry              : Plane Wall\n');
-        fprintf('Thermal Conductivity  : %.4f W/m-K\n', inputs.k);
+        if inputs.thermalchoice==0
+            fprintf('Thermal Conductivity  : %.4f W/m-K\n',inputs.k);
+        else
+            fprintf('Thermal Conductivity  : Variable\n');
+            fprintf('k0                    : %.4f W/m-K\n',inputs.variablek.ko);
+            fprintf('Beta                  : %.6e 1/K\n',inputs.variablek.beta);
+            fprintf('Tref                  : %.2f K\n',inputs.variablek.Tref);
+        end
         fprintf('Thickness             : %.4f m\n', inputs.t);
         fprintf('Area                  : %.4f m^2\n', inputs.a);
 
@@ -123,18 +130,22 @@ if geometryc == 1
 
     else
 
-        solution = solvePlaneWall(inputs);
-
-        heatFlux = calculateHeatFlux(inputs, solution);
-        heatRate = calculateHeatRate(inputs, heatFlux);
-        validation = verifyBoundaryConditions(inputs, solution, heatFlux);
+      if inputs.thermalchoice==0
+            solution=solvePlaneWall(inputs);
+            heatFlux=calculateHeatFlux(inputs,solution);
+       else
+            solution=solvePlaneWallFD(inputs);
+            heatFlux=calculateHeatFluxFD(inputs,solution);
+       end
+        
+        heatRate=calculateHeatRate(inputs,heatFlux);
+        validation=verifyBoundaryConditions(inputs,solution,heatFlux);
 
         fprintf('\n========================================\n');
         fprintf('                RESULTS\n');
         fprintf('========================================\n');
 
         fprintf('Geometry              : Plane Wall\n');
-        fprintf('Thermal Conductivity  : %.4f W/m-K\n', inputs.k);
         fprintf('Thickness             : %.4f m\n', inputs.t);
         fprintf('Area                  : %.4f m^2\n', inputs.a);
 
@@ -211,12 +222,40 @@ if geometryc == 1
             fprintf('Heat Transfer Rate   : %.4f W\n',heatRate.right);
 
         end
+        if inputs.thermalchoice==0
+            Tmax=solution.T_max;
+            xTmax=solution.x_Tmax;
+            Tleft=solution.T_left;
+            Tright=solution.T_right;
+        else
+            Tmax=max(solution.T);
+            [~,imax]=max(solution.T);
+            xTmax=solution.x(imax);
+            Tleft=solution.T(1);
+            Tright=solution.T(end);
+        end
+       if inputs.thermalchoice==0
 
-        fprintf('\nMaximum Temperature : %.4f K\n', solution.T_max);
-        fprintf('Location of Tmax    : %.4f m\n', solution.x_Tmax);
-        fprintf('Left Surface Temp   : %.4f K\n', solution.T_left);
-        fprintf('Right Surface Temp  : %.4f K\n', solution.T_right);
-
+            % Analytical solution
+            fprintf('\nMaximum Temperature  : %.4f K\n',solution.Tmax);
+            fprintf('Location of Tmax     : %.4f m\n',solution.xTmax);
+            fprintf('Left Surface Temp    : %.4f K\n',solution.Tleft);
+            fprintf('Right Surface Temp   : %.4f K\n',solution.Tright);
+        
+        else
+        
+            % Finite Difference solution
+            fprintf('\nNumber of Nodes      : %d\n',inputs.N);
+            fprintf('Grid Spacing         : %.6e m\n',solution.dx);
+            fprintf('Newton Iterations    : %d\n',solution.iterations);
+            fprintf('Converged            : %d\n',solution.converged);
+            fprintf('Maximum Residual     : %.6e\n',solution.residual);
+            fprintf('Maximum Temperature  : %.4f K\n',max(solution.T));
+            fprintf('Minimum Temperature  : %.4f K\n',min(solution.T));
+            fprintf('Left Surface Temp    : %.4f K\n',solution.T(1));
+            fprintf('Right Surface Temp   : %.4f K\n',solution.T(end));
+        
+        end
         fprintf('========================================\n');
 
         plotTemperature(solution);

@@ -17,265 +17,297 @@ geometryc = input('Enter the number of your desired geometry: ');
 
 if geometryc == 1
 
-    inputs = getInputs();
-    validateInputs(inputs);
-    geometry = PlaneWall(inputs);
+    fprintf('\nSelect Wall Type:\n');
+    fprintf('1. Single Wall\n');
+    fprintf('2. Series Composite Wall\n');
+    fprintf('3. Parallel composite wall')
+    walltype = input('Enter the number of your desired wall type: ');
 
-    if inputs.BC.left.type == 5 || inputs.BC.right.type == 5
+    if walltype == 2
 
-        solutionFD = solvePlaneWallFD(inputs);
-
-        fprintf('\n========================================\n');
-        fprintf('                RESULTS\n');
-        fprintf('========================================\n');
-
-        fprintf('Geometry              : Plane Wall\n');
-        if inputs.thermalchoice==0
-            fprintf('Thermal Conductivity  : %.4f W/m-K\n',inputs.k);
-        else
-            fprintf('Thermal Conductivity  : Variable\n');
-            fprintf('k0                    : %.4f W/m-K\n',inputs.variablek.ko);
-            fprintf('Beta                  : %.6e 1/K\n',inputs.variablek.beta);
-            fprintf('Tref                  : %.2f K\n',inputs.variablek.Tref);
-        end
-        fprintf('Thickness             : %.4f m\n', inputs.t);
-        fprintf('Area                  : %.4f m^2\n', inputs.a);
-
-        fprintf('\n----------------------------------------\n');
-        fprintf('THERMAL RESULTS\n');
-        fprintf('----------------------------------------\n');
-
-        fprintf('\nLeft Boundary (x = 0):\n');
-
-        switch inputs.BC.left.type
-
-            case 1
-                fprintf('Boundary Condition   : Specified Temperature\n');
-                fprintf('Temperature           : %.2f K\n', inputs.BC.left.T);
-
-            case 2
-                fprintf('Boundary Condition   : Specified Heat Flux\n');
-                fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.left.q);
-
-            case 3
-                fprintf('Boundary Condition   : Insulated\n');
-                fprintf('Heat Flux             : 0 W/m^2\n');
-
-            case 4
-                fprintf('Boundary Condition   : Convection\n');
-                fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.left.h);
-                fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.left.Tinf);
-
-            case 5
-                fprintf('Boundary Condition   : Radiation\n');
-                fprintf('Emissivity            : %.4f\n', inputs.BC.left.emissivity);
-                fprintf('Surrounding Temperature: %.2f K\n', inputs.BC.left.Tsurr);
-
-        end
-
-        fprintf('\nRight Boundary (x = L):\n');
-
-        switch inputs.BC.right.type
-
-            case 1
-                fprintf('Boundary Condition   : Specified Temperature\n');
-                fprintf('Temperature           : %.2f K\n', inputs.BC.right.T);
-
-            case 2
-                fprintf('Boundary Condition   : Specified Heat Flux\n');
-                fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.right.q);
-
-            case 3
-                fprintf('Boundary Condition   : Insulated\n');
-                fprintf('Heat Flux             : 0 W/m^2\n');
-
-            case 4
-                fprintf('Boundary Condition   : Convection\n');
-                fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.right.h);
-                fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.right.Tinf);
-
-            case 5
-                fprintf('Boundary Condition   : Radiation\n');
-                fprintf('Emissivity            : %.4f\n', inputs.BC.right.emissivity);
-                fprintf('Surrounding Temperature: %.2f K\n', inputs.BC.right.Tsurr);
-
-        end
-
-        fprintf('\n----------------------------------------\n');
-        fprintf('FINITE DIFFERENCE RESULTS\n');
-        fprintf('----------------------------------------\n');
-        
-        fprintf('Number of Nodes      : %d\n', inputs.N);
-        fprintf('Grid Spacing         : %.6e m\n', solutionFD.dx);
-        fprintf('Newton Iterations    : %d\n', solutionFD.iterations);
-        fprintf('Converged            : %d\n', solutionFD.converged);
-        fprintf('Maximum Residual     : %.6e\n', solutionFD.residual);
-        
-        fprintf('\nMaximum Temperature  : %.4f K\n', max(solutionFD.T));
-        fprintf('Minimum Temperature  : %.4f K\n', min(solutionFD.T));
-        fprintf('Left Surface Temp    : %.4f K\n', solutionFD.T(1));
-        fprintf('Right Surface Temp   : %.4f K\n', solutionFD.T(end));
-        
-        heatFluxFD = calculateHeatFluxFD(inputs, solutionFD);
-        
-        fprintf('\nHeat Flux at x = 0   : %.4f W/m^2\n', heatFluxFD(1));
-        fprintf('Heat Flux at x = L   : %.4f W/m^2\n', heatFluxFD(end));
-        
-        fprintf('========================================\n');
-        
-        plotTemperature(solutionFD);
-        plotTemperatureContour(solutionFD);
-        plotHeatFlux(solutionFD, heatFluxFD);
-
-
-    else
-
-      if inputs.thermalchoice==0
-            solution=solvePlaneWall(inputs);
-            heatFlux=calculateHeatFlux(inputs,solution);
-       else
-            solution=solvePlaneWallFD(inputs);
-            heatFlux=calculateHeatFluxFD(inputs,solution);
-       end
-        
-        heatRate=calculateHeatRate(inputs,heatFlux);
-        validation=verifyBoundaryConditions(inputs,solution,heatFlux);
+        composite = getCompositeWallInputs();
+        solutionc = solveCompositeWall(composite);
 
         fprintf('\n========================================\n');
-        fprintf('                RESULTS\n');
+        fprintf('       COMPOSITE WALL RESULTS\n');
+        fprintf('========================================\n');
+        
+        for i = 1:composite.nLayers
+            fprintf('Layer %d Resistance : %.6f K/W\n',i, solutionc.R(i));
+        end
+        
+        fprintf('\nTotal Resistance   : %.6f K/W\n', solutionc.Rtotal);
+        fprintf('Heat Transfer Rate : %.4f W\n', solutionc.Q);
+        fprintf('Heat Flux          : %.4f W/m^2\n', solutionc.q);
+        
+        for i = 1:length(solutionc.Tinterface)
+            fprintf('Interface %d Temp.  : %.4f K\n',i, solutionc.Tinterface(i));
+        end
+        fprintf('Total Contact Resistance: %.6f K/W\n',solutionc.Rcontact);
         fprintf('========================================\n');
 
-        fprintf('Geometry              : Plane Wall\n');
-        fprintf('Thickness             : %.4f m\n', inputs.t);
-        fprintf('Area                  : %.4f m^2\n', inputs.a);
+    elseif walltype == 1
 
-        fprintf('\n----------------------------------------\n');
-        fprintf('THERMAL RESULTS\n');
-        fprintf('----------------------------------------\n');
+        inputs = getInputs();
+        validateInputs(inputs);
+        geometry = PlaneWall(inputs);
 
-        fprintf('\nLeft Boundary (x = 0):\n');
-
-        switch inputs.BC.left.type
-
-            case 1
-                fprintf('Boundary Condition   : Specified Temperature\n');
-                fprintf('Temperature           : %.2f K\n', inputs.BC.left.T);
-
-            case 2
-                fprintf('Boundary Condition   : Specified Heat Flux\n');
-                fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.left.q);
-
-            case 3
-                fprintf('Boundary Condition   : Insulated\n');
-                fprintf('Heat Flux             : 0 W/m^2\n');
-
-            case 4
-                fprintf('Boundary Condition   : Convection\n');
-                fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.left.h);
-                fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.left.Tinf);
-
-        end
-
-        fprintf('\nRight Boundary (x = L):\n');
-
-        switch inputs.BC.right.type
-
-            case 1
-                fprintf('Boundary Condition   : Specified Temperature\n');
-                fprintf('Temperature           : %.2f K\n', inputs.BC.right.T);
-
-            case 2
-                fprintf('Boundary Condition   : Specified Heat Flux\n');
-                fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.right.q);
-
-            case 3
-                fprintf('Boundary Condition   : Insulated\n');
-                fprintf('Heat Flux             : 0 W/m^2\n');
-
-            case 4
-                fprintf('Boundary Condition   : Convection\n');
-                fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.right.h);
-                fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.right.Tinf);
-
-        end
-
-        fprintf('\n----------------------------------------\n');
-        fprintf('HEAT TRANSFER RESULTS\n');
-        fprintf('----------------------------------------\n');
-
-        fprintf('Heat Flux at x = 0   : %.4f W/m^2\n', heatFlux(1));
-        fprintf('Heat Flux at x = L   : %.4f W/m^2\n', heatFlux(end));
-
-        fprintf('Heat Rate - Left     : %.4f W\n', heatRate.left);
-        fprintf('Heat Rate - Right    : %.4f W\n', heatRate.right);
-
-        if inputs.heatGeneration == 1
-
-            fprintf('Heat Generation      : %.4f W/m^3\n', inputs.qgen);
-            fprintf('Total Heat Generated : %.4f W\n', heatRate.generated);
-            energyBalanceError = abs(heatRate.generated -  (heatRate.left + heatRate.right))/ heatRate.generated * 100;
-
-            fprintf('Energy Balance Error : %.6f %%\n',energyBalanceError);
-
+        if inputs.BC.left.type == 5 || inputs.BC.right.type == 5
+    
+            solutionFD = solvePlaneWallFD(inputs);
+    
+            fprintf('\n========================================\n');
+            fprintf('                RESULTS\n');
+            fprintf('========================================\n');
+    
+            fprintf('Geometry              : Plane Wall\n');
+            if inputs.thermalchoice==0
+                fprintf('Thermal Conductivity  : %.4f W/m-K\n',inputs.k);
+            else
+                fprintf('Thermal Conductivity  : Variable\n');
+                fprintf('k0                    : %.4f W/m-K\n',inputs.variablek.ko);
+                fprintf('Beta                  : %.6e 1/K\n',inputs.variablek.beta);
+                fprintf('Tref                  : %.2f K\n',inputs.variablek.Tref);
+            end
+            fprintf('Thickness             : %.4f m\n', inputs.t);
+            fprintf('Area                  : %.4f m^2\n', inputs.a);
+    
+            fprintf('\n----------------------------------------\n');
+            fprintf('THERMAL RESULTS\n');
+            fprintf('----------------------------------------\n');
+    
+            fprintf('\nLeft Boundary (x = 0):\n');
+    
+            switch inputs.BC.left.type
+    
+                case 1
+                    fprintf('Boundary Condition   : Specified Temperature\n');
+                    fprintf('Temperature           : %.2f K\n', inputs.BC.left.T);
+    
+                case 2
+                    fprintf('Boundary Condition   : Specified Heat Flux\n');
+                    fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.left.q);
+    
+                case 3
+                    fprintf('Boundary Condition   : Insulated\n');
+                    fprintf('Heat Flux             : 0 W/m^2\n');
+    
+                case 4
+                    fprintf('Boundary Condition   : Convection\n');
+                    fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.left.h);
+                    fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.left.Tinf);
+    
+                case 5
+                    fprintf('Boundary Condition   : Radiation\n');
+                    fprintf('Emissivity            : %.4f\n', inputs.BC.left.emissivity);
+                    fprintf('Surrounding Temperature: %.2f K\n', inputs.BC.left.Tsurr);
+    
+            end
+    
+            fprintf('\nRight Boundary (x = L):\n');
+    
+            switch inputs.BC.right.type
+    
+                case 1
+                    fprintf('Boundary Condition   : Specified Temperature\n');
+                    fprintf('Temperature           : %.2f K\n', inputs.BC.right.T);
+    
+                case 2
+                    fprintf('Boundary Condition   : Specified Heat Flux\n');
+                    fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.right.q);
+    
+                case 3
+                    fprintf('Boundary Condition   : Insulated\n');
+                    fprintf('Heat Flux             : 0 W/m^2\n');
+    
+                case 4
+                    fprintf('Boundary Condition   : Convection\n');
+                    fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.right.h);
+                    fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.right.Tinf);
+    
+                case 5
+                    fprintf('Boundary Condition   : Radiation\n');
+                    fprintf('Emissivity            : %.4f\n', inputs.BC.right.emissivity);
+                    fprintf('Surrounding Temperature: %.2f K\n', inputs.BC.right.Tsurr);
+    
+            end
+    
+            fprintf('\n----------------------------------------\n');
+            fprintf('FINITE DIFFERENCE RESULTS\n');
+            fprintf('----------------------------------------\n');
+            
+            fprintf('Number of Nodes      : %d\n', inputs.N);
+            fprintf('Grid Spacing         : %.6e m\n', solutionFD.dx);
+            fprintf('Newton Iterations    : %d\n', solutionFD.iterations);
+            fprintf('Converged            : %d\n', solutionFD.converged);
+            fprintf('Maximum Residual     : %.6e\n', solutionFD.residual);
+            
+            fprintf('\nMaximum Temperature  : %.4f K\n', max(solutionFD.T));
+            fprintf('Minimum Temperature  : %.4f K\n', min(solutionFD.T));
+            fprintf('Left Surface Temp    : %.4f K\n', solutionFD.T(1));
+            fprintf('Right Surface Temp   : %.4f K\n', solutionFD.T(end));
+            
+            heatFluxFD = calculateHeatFluxFD(inputs, solutionFD);
+            
+            fprintf('\nHeat Flux at x = 0   : %.4f W/m^2\n', heatFluxFD(1));
+            fprintf('Heat Flux at x = L   : %.4f W/m^2\n', heatFluxFD(end));
+            
+            fprintf('========================================\n');
+            
+            plotTemperature(solutionFD);
+            plotTemperatureContour(solutionFD);
+            plotHeatFlux(solutionFD, heatFluxFD);
+    
+    
         else
-            fprintf('Heat Generation      : None\n');
-            fprintf('Heat Transfer Rate   : %.4f W\n',heatRate.right);
-
+    
+          if inputs.thermalchoice==0
+                solution=solvePlaneWall(inputs);
+                heatFlux=calculateHeatFlux(inputs,solution);
+           else
+                solution=solvePlaneWallFD(inputs);
+                heatFlux=calculateHeatFluxFD(inputs,solution);
+           end
+            
+            heatRate=calculateHeatRate(inputs,heatFlux);
+            validation=verifyBoundaryConditions(inputs,solution,heatFlux);
+    
+            fprintf('\n========================================\n');
+            fprintf('                RESULTS\n');
+            fprintf('========================================\n');
+    
+            fprintf('Geometry              : Plane Wall\n');
+            fprintf('Thickness             : %.4f m\n', inputs.t);
+            fprintf('Area                  : %.4f m^2\n', inputs.a);
+    
+            fprintf('\n----------------------------------------\n');
+            fprintf('THERMAL RESULTS\n');
+            fprintf('----------------------------------------\n');
+    
+            fprintf('\nLeft Boundary (x = 0):\n');
+    
+            switch inputs.BC.left.type
+    
+                case 1
+                    fprintf('Boundary Condition   : Specified Temperature\n');
+                    fprintf('Temperature           : %.2f K\n', inputs.BC.left.T);
+    
+                case 2
+                    fprintf('Boundary Condition   : Specified Heat Flux\n');
+                    fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.left.q);
+    
+                case 3
+                    fprintf('Boundary Condition   : Insulated\n');
+                    fprintf('Heat Flux             : 0 W/m^2\n');
+    
+                case 4
+                    fprintf('Boundary Condition   : Convection\n');
+                    fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.left.h);
+                    fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.left.Tinf);
+    
+            end
+    
+            fprintf('\nRight Boundary (x = L):\n');
+    
+            switch inputs.BC.right.type
+    
+                case 1
+                    fprintf('Boundary Condition   : Specified Temperature\n');
+                    fprintf('Temperature           : %.2f K\n', inputs.BC.right.T);
+    
+                case 2
+                    fprintf('Boundary Condition   : Specified Heat Flux\n');
+                    fprintf('Specified Heat Flux   : %.4f W/m^2\n', inputs.BC.right.q);
+    
+                case 3
+                    fprintf('Boundary Condition   : Insulated\n');
+                    fprintf('Heat Flux             : 0 W/m^2\n');
+    
+                case 4
+                    fprintf('Boundary Condition   : Convection\n');
+                    fprintf('Convection Coefficient: %.4f W/m^2-K\n', inputs.BC.right.h);
+                    fprintf('Fluid Temperature     : %.2f K\n', inputs.BC.right.Tinf);
+    
+            end
+    
+            fprintf('\n----------------------------------------\n');
+            fprintf('HEAT TRANSFER RESULTS\n');
+            fprintf('----------------------------------------\n');
+    
+            fprintf('Heat Flux at x = 0   : %.4f W/m^2\n', heatFlux(1));
+            fprintf('Heat Flux at x = L   : %.4f W/m^2\n', heatFlux(end));
+    
+            fprintf('Heat Rate - Left     : %.4f W\n', heatRate.left);
+            fprintf('Heat Rate - Right    : %.4f W\n', heatRate.right);
+    
+            if inputs.heatGeneration == 1
+    
+                fprintf('Heat Generation      : %.4f W/m^3\n', inputs.qgen);
+                fprintf('Total Heat Generated : %.4f W\n', heatRate.generated);
+                energyBalanceError = abs(heatRate.generated -  (heatRate.left + heatRate.right))/ heatRate.generated * 100;
+    
+                fprintf('Energy Balance Error : %.6f %%\n',energyBalanceError);
+    
+            else
+                fprintf('Heat Generation      : None\n');
+                fprintf('Heat Transfer Rate   : %.4f W\n',heatRate.right);
+    
+            end
+            if inputs.thermalchoice==0
+                Tmax=solution.T_max;
+                xTmax=solution.x_Tmax;
+                Tleft=solution.T_left;
+                Tright=solution.T_right;
+            else
+                Tmax=max(solution.T);
+                [~,imax]=max(solution.T);
+                xTmax=solution.x(imax);
+                Tleft=solution.T(1);
+                Tright=solution.T(end);
+            end
+           if inputs.thermalchoice==0
+    
+                % Analytical solution
+                fprintf('\nMaximum Temperature  : %.4f K\n',Tmax);
+                fprintf('Location of Tmax     : %.4f m\n',xTmax);
+                fprintf('Left Surface Temp    : %.4f K\n',Tleft);
+                fprintf('Right Surface Temp   : %.4f K\n',Tright);
+            
+            else
+            
+                % Finite Difference solution
+                fprintf('\nNumber of Nodes      : %d\n',inputs.N);
+                fprintf('Grid Spacing         : %.6e m\n',solution.dx);
+                fprintf('Newton Iterations    : %d\n',solution.iterations);
+                fprintf('Converged            : %d\n',solution.converged);
+                fprintf('Maximum Residual     : %.6e\n',solution.residual);
+                fprintf('Maximum Temperature  : %.4f K\n',max(solution.T));
+                fprintf('Minimum Temperature  : %.4f K\n',min(solution.T));
+                fprintf('Left Surface Temp    : %.4f K\n',solution.T(1));
+                fprintf('Right Surface Temp   : %.4f K\n',solution.T(end));
+            
+            end
+            fprintf('========================================\n');
+    
+            plotTemperature(solution);
+    
+            plotTemperatureContour(solution);
+    
+            plotHeatFlux(solution, heatFlux);
+    
+            fprintf('\n----------------------------------------\n');
+            fprintf('BOUNDARY CONDITION VALIDATION\n');
+            fprintf('----------------------------------------\n');
+    
+            fprintf('Left Boundary Error  : %.6e\n',validation.left.error);
+    
+            fprintf('Left Boundary Status : %s\n',validation.left.status);
+            fprintf('\nRight Boundary Error : %.6e\n', validation.right.error);
+            fprintf('Right Boundary Status: %s\n',validation.right.status);
+    
         end
-        if inputs.thermalchoice==0
-            Tmax=solution.T_max;
-            xTmax=solution.x_Tmax;
-            Tleft=solution.T_left;
-            Tright=solution.T_right;
-        else
-            Tmax=max(solution.T);
-            [~,imax]=max(solution.T);
-            xTmax=solution.x(imax);
-            Tleft=solution.T(1);
-            Tright=solution.T(end);
-        end
-       if inputs.thermalchoice==0
-
-            % Analytical solution
-            fprintf('\nMaximum Temperature  : %.4f K\n',solution.Tmax);
-            fprintf('Location of Tmax     : %.4f m\n',solution.xTmax);
-            fprintf('Left Surface Temp    : %.4f K\n',solution.Tleft);
-            fprintf('Right Surface Temp   : %.4f K\n',solution.Tright);
         
-        else
-        
-            % Finite Difference solution
-            fprintf('\nNumber of Nodes      : %d\n',inputs.N);
-            fprintf('Grid Spacing         : %.6e m\n',solution.dx);
-            fprintf('Newton Iterations    : %d\n',solution.iterations);
-            fprintf('Converged            : %d\n',solution.converged);
-            fprintf('Maximum Residual     : %.6e\n',solution.residual);
-            fprintf('Maximum Temperature  : %.4f K\n',max(solution.T));
-            fprintf('Minimum Temperature  : %.4f K\n',min(solution.T));
-            fprintf('Left Surface Temp    : %.4f K\n',solution.T(1));
-            fprintf('Right Surface Temp   : %.4f K\n',solution.T(end));
-        
-        end
-        fprintf('========================================\n');
-
-        plotTemperature(solution);
-
-        plotTemperatureContour(solution);
-
-        plotHeatFlux(solution, heatFlux);
-
-        fprintf('\n----------------------------------------\n');
-        fprintf('BOUNDARY CONDITION VALIDATION\n');
-        fprintf('----------------------------------------\n');
-
-        fprintf('Left Boundary Error  : %.6e\n',validation.left.error);
-
-        fprintf('Left Boundary Status : %s\n',validation.left.status);
-        fprintf('\nRight Boundary Error : %.6e\n', validation.right.error);
-        fprintf('Right Boundary Status: %s\n',validation.right.status);
-
     end
-
 else
 
     fprintf('\nSelected geometry has not been implemented yet, Try again later.\n');

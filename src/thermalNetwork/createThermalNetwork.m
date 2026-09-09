@@ -1,0 +1,16 @@
+function network = createThermalNetwork()
+
+% Create empty thermal network
+
+network.graph = graph();
+
+network.nodes = struct( 'id', {}, 'type', {},'T', {});
+
+network.edges = struct( ...
+    'id', {}, ...
+    'from', {}, ...
+    'to', {}, ...
+    'type', {}, ...
+    'R', {});
+
+end

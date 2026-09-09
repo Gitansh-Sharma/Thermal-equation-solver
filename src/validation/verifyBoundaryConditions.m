@@ -77,7 +77,26 @@ switch inputs.BC.left.type
 
         validation.left.error = errorValue;
         validation.left.status = status;
-
+        
+    case 5
+        % Radiation
+    
+        sigma = 5.670374419e-8;
+    
+        expected = inputs.BC.left.epsilon * sigma *(T_left^4 - inputs.BC.left.Tsurr^4);
+    
+        calculated = -heatFlux(1);
+    
+        errorValue = abs(calculated - expected);
+    
+        if errorValue <= tolerance
+            status = "PASS";
+        else
+            status = "FAIL";
+        end
+    
+        validation.left.error = errorValue;
+        validation.left.status = status;
 
     otherwise
         error('Invalid left boundary condition.');
@@ -154,7 +173,27 @@ switch inputs.BC.right.type
 
         validation.right.error = errorValue;
         validation.right.status = status;
-
+    
+    case 5
+        % Radiation
+    
+        sigma = 5.670374419e-8;
+    
+        expected = inputs.BC.right.epsilon * sigma * ...
+            (T_right^4 - inputs.BC.right.Tsurr^4);
+    
+        calculated = heatFlux(end);
+    
+        errorValue = abs(calculated - expected);
+    
+        if errorValue <= tolerance
+            status = "PASS";
+        else
+            status = "FAIL";
+        end
+    
+        validation.right.error = errorValue;
+        validation.right.status = status;
 
     otherwise
         error('Invalid right boundary condition.');

@@ -19,32 +19,57 @@ if geometryc == 1
 
     fprintf('\nSelect Wall Type:\n');
     fprintf('1. Single Wall\n');
-    fprintf('2. Series Composite Wall\n');
-    fprintf('3. Parallel composite wall')
+    fprintf('2. Thermal Network\n');
     walltype = input('Enter the number of your desired wall type: ');
 
     if walltype == 2
+        
+            fprintf("\n************************************\n");
+            fprintf("******** Thermal Resistance Network ********\n");
+            fprintf("************************************\n\n");
+        
+            % Create empty thermal network
+            network = createThermalNetwork();
+        
+            % Create first node
+            network = addThermalNode(network,"internal",NaN);
+        
+            nextNodeID = 2;
+        
+            % Start building network
+            [network,nextNodeID] = buildThermalNetwork(network,1,nextNodeID);
+        
+            fprintf('\n========================================\n');
+            fprintf('       NETWORK CONSTRUCTION COMPLETE\n');
+            fprintf('========================================\n');
+        
+            fprintf('Number of nodes      : %d\n',nextNodeID - 1);
+            fprintf('Number of components : %d\n',height(network.graph.Edges));
+        
+            fprintf('\nNetwork edges:\n');
+            disp(network.graph.Edges);
+        
+            fprintf('\nThermal network graph:\n');
+            disp(network.graph);
+        
+            figure;
+            plot(network.graph);
+            title('Thermal Resistance Network');
+        
+            % Boundary-condition input will be added here later.
+            %
+            % For now:
+            % The network has only been constructed.
+            %
+            % Later this section will:
+            % 1. Ask which nodes are boundaries
+            % 2. Ask the boundary-condition type
+            % 3. Collect BC parameters
+            % 4. Pass network + BCs to the appropriate solver
+        
+            fprintf('\nNetwork topology has been created successfully.\n');
+            fprintf('Boundary-condition input will be added next.\n');
 
-        composite = getCompositeWallInputs();
-        solutionc = solveCompositeWall(composite);
-
-        fprintf('\n========================================\n');
-        fprintf('       COMPOSITE WALL RESULTS\n');
-        fprintf('========================================\n');
-        
-        for i = 1:composite.nLayers
-            fprintf('Layer %d Resistance : %.6f K/W\n',i, solutionc.R(i));
-        end
-        
-        fprintf('\nTotal Resistance   : %.6f K/W\n', solutionc.Rtotal);
-        fprintf('Heat Transfer Rate : %.4f W\n', solutionc.Q);
-        fprintf('Heat Flux          : %.4f W/m^2\n', solutionc.q);
-        
-        for i = 1:length(solutionc.Tinterface)
-            fprintf('Interface %d Temp.  : %.4f K\n',i, solutionc.Tinterface(i));
-        end
-        fprintf('Total Contact Resistance: %.6f K/W\n',solutionc.Rcontact);
-        fprintf('========================================\n');
 
     elseif walltype == 1
 
@@ -311,5 +336,306 @@ if geometryc == 1
 else
 
     fprintf('\nSelected geometry has not been implemented yet, Try again later.\n');
+
+end
+
+function [network,nextNodeID] = buildThermalNetwork(network,currentNode,nextNodeID)
+
+    finished = false;
+
+    while ~finished
+
+        fprintf('\n----------------------------------------\n');
+        fprintf('Current node: %d\n',currentNode);
+        fprintf('----------------------------------------\n');
+
+        fprintf('1. Add component to new node\n');
+        fprintf('2. Create parallel branches\n');
+        fprintf('3. Move to existing node\n');
+        fprintf('4. Finish network\n');
+
+        choice = input('Enter your choice: ');
+
+        switch choice
+
+            case 1
+
+                newNode = nextNodeID;
+                nextNodeID = nextNodeID + 1;
+
+                network = addThermalNode(network,"internal",NaN);
+
+                fprintf('\nCreating Node %d...\n',newNode);
+
+                [componentType,inputMode,parameters] = getThermalComponentInput();
+
+                network = addThermalEdge(network,currentNode,newNode,componentType,inputMode,parameters);
+
+                fprintf('Connection added: Node %d -> Node %d\n', ...
+                    currentNode,newNode);
+
+                currentNode = newNode;
+
+
+            case 2
+
+                fprintf('\n========================================\n');
+                fprintf('       PARALLEL BRANCH GROUP\n');
+                fprintf('========================================\n');
+
+                [network,nextNodeID] = ...
+                    buildParallelGroup(network,currentNode,nextNodeID);
+
+
+            case 3
+
+                fprintf('\n----------------------------------------\n');
+                fprintf('Available nodes:\n');
+                fprintf('----------------------------------------\n');
+
+                for i = 1:(nextNodeID - 1)
+
+                    if i ~= currentNode
+                        fprintf('Node %d\n',i);
+                    end
+
+                end
+
+                newCurrentNode = input( '\nEnter node to move to: ');
+
+                if newCurrentNode >= 1 && newCurrentNode < nextNodeID && newCurrentNode ~= currentNode
+
+                    currentNode = newCurrentNode;
+
+                    fprintf('\nMoved to Node %d.\n',currentNode);
+
+                else
+
+                    fprintf('\nInvalid node selection.\n');
+
+                end
+
+
+            case 4
+
+                finished = true;
+
+                fprintf('\nFinishing network construction...\n');
+
+
+            otherwise
+
+                fprintf('\nInvalid choice. Please try again.\n');
+
+        end
+    end
+end
+
+function [network,nextNodeID] = buildParallelGroup( network,parentNode,nextNodeID)
+
+    anotherBranch = true;
+    branchNumber = 1;
+
+    while anotherBranch
+
+        fprintf('\n----------------------------------------\n');
+        fprintf('Building Parallel Branch %d from Node %d\n', ...
+            branchNumber,parentNode);
+        fprintf('----------------------------------------\n');
+
+        [network,nextNodeID] = buildBranch(network,parentNode,nextNodeID);
+
+        fprintf('\nBranch %d completed.\n',branchNumber);
+
+        fprintf('\nAdd another parallel branch from Node %d?\n',parentNode);
+        fprintf('1. Yes\n');
+        fprintf('2. No\n');
+
+        choice = input('Enter your choice: ');
+
+        if choice == 1
+
+            branchNumber = branchNumber + 1;
+
+        elseif choice == 2
+
+            anotherBranch = false;
+
+        else
+
+            fprintf('\nInvalid choice. Ending parallel group.\n');
+            anotherBranch = false;
+
+        end
+    end
+
+    fprintf('\nParallel group completed at Node %d.\n',parentNode);
+end
+
+function [network,nextNodeID] = buildBranch( network,parentNode,nextNodeID)
+
+    currentNode = parentNode;
+    branchFinished = false;
+
+    while ~branchFinished
+
+        fprintf('\n----------------------------------------\n');
+        fprintf('Parallel Branch - Current node: %d\n',currentNode);
+        fprintf('----------------------------------------\n');
+
+        fprintf('1. Continue branch to a new node\n');
+        fprintf('2. Create nested parallel branches\n');
+        fprintf('3. Finish this branch\n');
+
+        choice = input('Enter your choice: ');
+
+        switch choice
+
+            case 1
+
+                newNode = nextNodeID;
+                nextNodeID = nextNodeID + 1;
+
+                network = addThermalNode(network,"internal",NaN);
+
+                fprintf('\nCreating Node %d...\n',newNode);
+
+                [componentType,inputMode,parameters] =getThermalComponentInput();
+
+                network = addThermalEdge(network,currentNode,newNode, componentType,inputMode,parameters);
+
+                fprintf('Connection added: Node %d -> Node %d\n', currentNode,newNode);
+
+                currentNode = newNode;
+
+
+            case 2
+
+                fprintf('\nStarting nested parallel group from Node %d...\n',currentNode);
+
+                [network,nextNodeID] =buildParallelGroup(network,currentNode,nextNodeID);
+
+                fprintf('\nReturned to Node %d.\n',currentNode);
+
+
+            case 3
+
+                branchFinished = true;
+
+                fprintf('\nBranch finished.\n');
+
+
+            otherwise
+
+                fprintf('\nInvalid choice. Please try again.\n');
+
+        end
+    end
+end
+
+function [componentType,inputMode,parameters] = getThermalComponentInput()
+
+    fprintf('\n========================================\n');
+    fprintf('        THERMAL COMPONENT\n');
+    fprintf('========================================\n');
+
+    fprintf('1. Conduction\n');
+    fprintf('2. Thermal Contact\n');
+    fprintf('3. Convection\n');
+    fprintf('4. Direct Resistance\n');
+
+    componentChoice = input('Select component: ');
+
+    parameters = struct();
+
+    switch componentChoice
+
+        case 1
+
+            componentType = "conduction";
+
+            fprintf('\nResistance input method:\n');
+            fprintf('1. Direct resistance\n');
+            fprintf('2. Physical parameters\n');
+
+            modeChoice = input('Enter choice: ');
+
+            if modeChoice == 1
+
+                inputMode = "direct";
+
+                parameters.R = input( 'Enter thermal resistance [K/W]: ');
+
+            elseif modeChoice == 2
+
+                inputMode = "parameters";
+
+                parameters.L = input( 'Enter conduction length L [m]: ');
+
+                parameters.k = input( 'Enter thermal conductivity k [W/m-K]: ');
+
+                parameters.A = input('Enter area A [m^2]: ');
+
+            else
+
+                error('Invalid resistance input mode.');
+
+            end
+
+
+        case 2
+
+            componentType = "contact";
+
+            inputMode = "parameters";
+
+            parameters.Rc = input( ...
+                'Enter contact resistance Rc [K/W]: ');
+
+
+        case 3
+
+            componentType = "convection";
+
+            fprintf('\nResistance input method:\n');
+            fprintf('1. Direct resistance\n');
+            fprintf('2. Physical parameters\n');
+
+            modeChoice = input('Enter choice: ');
+
+            if modeChoice == 1
+
+                inputMode = "direct";
+
+                parameters.R = input('Enter thermal resistance [K/W]: ');
+
+            elseif modeChoice == 2
+
+                inputMode = "parameters";
+
+                parameters.h = input('Enter convection coefficient h [W/m^2-K]: ');
+
+                parameters.A = input( 'Enter convection area A [m^2]: ');
+
+            else
+
+                error('Invalid resistance input mode.');
+
+            end
+
+
+        case 4
+
+            componentType = "conduction";
+            inputMode = "direct";
+
+            parameters.R = input( 'Enter thermal resistance [K/W]: ');
+
+
+        otherwise
+
+            error('Invalid thermal component selection.');
+
+    end
 
 end
